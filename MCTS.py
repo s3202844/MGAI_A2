@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
 
 import time
+import copy
 import botbowl
 import numpy as np
+
+from botbowl.core import Square
+
+'''
+Important functions:
+
+game.get_team_side(self.my_team)
+game.get_ball()
+game.get_player_at(Square(x, y))
+game.get_catcher(Square(x, y))
+game.get_ball_carrier()
+'''
 
 
 class Node():
@@ -22,13 +35,14 @@ class MyMctsBot(botbowl.Agent):
     def __init__(self, name, seed=None):
         super().__init__(name)
         self.my_team = None
-        self._tree = Node(None)
+        self.tree = Node(None)
         self.rnd = np.random.RandomState(seed)
+        self.s = False
 
     def new_game(self, game, team):
         self.my_team = team
-        # for p in team.players:
-        #     print(p.position)
+        self.opp_team = game.get_opp_team(team)
+        self.simulation = copy.deepcopy(game)
 
     def act(self, game):
         # Select a random action type
@@ -39,8 +53,6 @@ class MyMctsBot(botbowl.Agent):
                 break
 
         # Select a random position and/or player
-        # if len(action_choice.players) > 0:
-        #     print(type(action_choice.players[0].__repr__()))
         position = self.rnd.choice(action_choice.positions) if len(
             action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(
@@ -54,9 +66,7 @@ class MyMctsBot(botbowl.Agent):
         return action
 
     def end_game(self, game):
-        print(len(self.my_team.players))
-        # for p in self.my_team.players:
-        #     print(p.position)
+        print(game.get_ball())
 
 
 botbowl.register_bot("MCTS", MyMctsBot)
@@ -64,11 +74,6 @@ botbowl.register_bot("MCTS", MyMctsBot)
 if __name__ == "__main__":
     # Load configurations, rules, arena and teams
     config = botbowl.load_config("web")
-    config.competition_mode = False
-    config.pathfinding_enabled = True
-    config.roster_size = 7
-    config.pitch_max = 5
-    config.pitch_min = 2
     ruleset = botbowl.load_rule_set(config.ruleset, all_rules=False)
     arena = botbowl.load_arena(config.arena)
     home = botbowl.load_team_by_filename("human", ruleset)
