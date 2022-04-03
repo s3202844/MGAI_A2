@@ -21,10 +21,10 @@ game.get_ball_carrier()
 class Node():
 
     def __init__(self, parent):
-        self._parent = parent
-        self._children = []
-        self._visits = 0
-        self._wins = 0
+        self.parent = parent
+        self.children = []
+        self.visits = 0
+        self.score = 0
 
     def isSameAction(self, act0, act1):
         return act0.__repr__() == act1.__repr__()
@@ -35,9 +35,9 @@ class MyMctsBot(botbowl.Agent):
     def __init__(self, name, seed=None):
         super().__init__(name)
         self.my_team = None
-        self.tree = Node(None)
+        self.my_tree = Node(None)
+        self.opp_tree = self.my_tree
         self.rnd = np.random.RandomState(seed)
-        self.s = False
 
     def new_game(self, game, team):
         self.my_team = team
