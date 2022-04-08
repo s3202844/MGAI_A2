@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from logging import root
+import os
 import time
 import copy
 import math
@@ -31,7 +31,7 @@ class Node:
         self.children_id = []
         self.evaluations = []
         self.off_pool = []
-        self.max_pool = 30
+        self.max_pool = 40
         self.C = 2**0.5
 
     def init_off_pool(self, available_actions):
@@ -76,11 +76,12 @@ class MyMctsBot(botbowl.Agent):
         super().__init__(name)
         self.my_team = None
         self.rnd = np.random.RandomState(seed)
-        # hyperparameters
+        self.records = [[] for _ in range(2)]
         self.steps = 0
+        # hyperparameters
         self.depth = 2
         self.epsilon = 0.3
-        self.min_budget = 10
+        self.min_budget = 20
 
     def new_game(self, game, team):
         self.my_team = team
@@ -142,15 +143,19 @@ class MyMctsBot(botbowl.Agent):
                     min_distance = min(min_distance, \
                         self._distance(ball.position, player.position))
             print(f"My team. Squares to the ball: {min_distance}")
+            self.records[0] += [min_distance]
             min_distance = 26
             for player in self.opp_team.players:
                 if player.position != None:
                     min_distance = min(min_distance, \
                         self._distance(ball.position, player.position))
             print(f"Op team. Squares to the ball: {min_distance}")
+            self.records[1] += [min_distance]
         else:
             print("My team. Squares to the ball: None")
             print("Op team. Squares to the ball: None")
+            self.records[0] += [-1]
+            self.records[1] += [-1]
 
     def act(self, game):
         self._brief_state(game)
@@ -167,7 +172,7 @@ class MyMctsBot(botbowl.Agent):
         if len(available_actions) == 0:
             return None
         root_node.init_off_pool(available_actions)
-        budget = max(self.min_budget, len(root_node.off_pool) * 4)
+        budget = max(self.min_budget, len(root_node.off_pool) * 5)
         for _ in range(budget):
             prob = np.random.rand()
             if (prob > self.epsilon and len(root_node.children) > 0) or \
@@ -180,7 +185,7 @@ class MyMctsBot(botbowl.Agent):
             self._backpropagation(game_copy, root_step, curr)
         self.steps += 1
         res = self._selection(root_node)
-        print(res.score())
+        # print(res.score())
         return res.action
 
     def _evaluate(self, game, root_step):
@@ -245,23 +250,28 @@ class MyMctsBot(botbowl.Agent):
 botbowl.register_bot("MCTS", MyMctsBot)
 
 if __name__ == "__main__":
+    if not os.path.exists("data/"):
+        os.mkdir("data/")
     config = botbowl.load_config("web")
     ruleset = botbowl.load_rule_set(config.ruleset, all_rules=False)
     arena = botbowl.load_arena(config.arena)
-    home_team = botbowl.load_team_by_filename("human", ruleset)
-    away_team = botbowl.load_team_by_filename("human", ruleset)
 
-    home_agent = botbowl.make_bot("MCTS")
-    away_agent = botbowl.make_bot("random")
-    home_agent.name = "MCTS Bot"
-    away_agent.name = "Random Bot"
-    config.debug_mode = False
-    game = botbowl.Game(0, home_team, away_team, home_agent, away_agent,
-                        config, arena=arena, ruleset=ruleset)
-    game.config.fast_mode = True
+    num_cases = 10
 
-    start = time.time()
-    game.init()
-    end = time.time()
-    print(end - start)
+    for i in range(num_cases):
+        home_team = botbowl.load_team_by_filename("human", ruleset)
+        away_team = botbowl.load_team_by_filename("human", ruleset)
+        home_agent = botbowl.make_bot("MCTS")
+        away_agent = botbowl.make_bot("random")
+        home_agent.name = "MCTS Bot"
+        away_agent.name = "Random Bot"
+        config.debug_mode = False
+        game = botbowl.Game(0, home_team, away_team, home_agent, away_agent,
+                            config, arena=arena, ruleset=ruleset)
+        game.config.fast_mode = True
+        start = time.time()
+        game.init()
+        end = time.time()
+        np.save("data/"+str(i)+".npy", home_agent.records)
+        print("Time consuming:", end - start)
 
